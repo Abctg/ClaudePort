@@ -179,7 +179,7 @@ pre { background: var(--surface-2); border: 1px solid var(--border); border-radi
   <main>
     <header class="topbar">
       <div class="left"><button class="btn small menubtn" id="menuBtn" aria-label="Menu">☰</button><h1 id="viewTitle">Overview</h1><span class="pill" id="weightPill">Weights: snapshot</span></div>
-      <div class="right"><span class="pill" id="dataPill"><span class="dot"></span>Loading market data…</span><button class="btn small" id="resetWeights" title="Reset lab weights to the snapshot">Reset weights</button><button class="btn small" id="openDrawer">Data</button></div>
+      <div class="right"><span class="pill" id="dataPill"><span class="dot"></span>Loading market data…</span><span class="pill" id="pricePill"><span class="dot"></span>Statement prices (16 Nov)</span><button class="btn small" id="refreshPrices" title="Fetch live prices now">Refresh prices</button><button class="btn small" id="resetWeights" title="Reset lab weights to your current holdings">Reset weights</button><button class="btn small" id="openDrawer">Data</button></div>
     </header>
     <div class="content" id="views"></div>
   </main>
@@ -801,19 +801,19 @@ const Content = (() => {
   const HOLDINGS = [
     { t: 'KNSL', name: 'Kinsale Capital Group', qty: 12.5, cost: 328.67, px: 395.89, ccy: 'USD', wStated: 0.067, valueGBP: 3751.85, gain: 637.04, div: 9.38, tr: 646.42,
       cls: 'Equity', sector: 'Financials', sub: 'Specialty insurance (E&S)', listing: 'NYSE', country: 'United States', region: 'US', econCcy: { USD: 1 }, revGeo: { US: 1 }, yf: 'KNSL', factorTags: ['US small/mid cap', 'Insurance cycle'] },
-    { t: 'TBCG.L', name: 'TBC Bank Group', qty: 63.21, cost: 4238.80, px: 5400.00, ccy: 'GBX', wStated: 0.061, valueGBP: 3413.60, gain: 734.05, div: 204.82, tr: 938.87,
+    { t: 'TBCG.L', name: 'TBC Bank Group', qty: 63.21488469, cost: 4238.80, px: 5400.00, ccy: 'GBX', wStated: 0.061, valueGBP: 3413.60, gain: 734.05, div: 204.82, tr: 938.87,
       cls: 'Equity', sector: 'Financials', sub: 'Emerging-market bank', listing: 'LSE', country: 'Georgia', region: 'EM', econCcy: { GEL: 0.75, USD: 0.15, UZS: 0.10 }, revGeo: { Georgia: 0.85, Uzbekistan: 0.15 }, yf: 'TBCG.L', factorTags: ['EM risk appetite', 'Georgian politics'] },
     { t: 'EGO', name: 'Eldorado Gold', qty: 135, cost: 31.84, px: 31.58, ccy: 'USD', wStated: 0.058, valueGBP: 3232.26, gain: -26.61, div: 32.32, tr: 5.71,
       cls: 'Equity', sector: 'Materials', sub: 'Gold & copper mining', listing: 'NYSE', country: 'Canada', region: 'US', econCcy: { USD: 0.6, TRY: 0.15, EUR: 0.1, CAD: 0.15 }, revGeo: { Turkey: 0.45, Canada: 0.3, Greece: 0.25 }, yf: 'EGO', factorTags: ['Gold price', 'Copper', 'EM mining jurisdictions'] },
     { t: 'AVGO', name: 'Broadcom', qty: 12, cost: 377.82, px: 347.01, ccy: 'USD', wStated: 0.057, valueGBP: 3157.07, gain: -280.31, div: 22.10, tr: -258.21,
       cls: 'Equity', sector: 'Information Technology', sub: 'Semiconductors & infrastructure software', listing: 'NASDAQ', country: 'United States', region: 'US', econCcy: { USD: 1 }, revGeo: { US: 0.3, Asia: 0.5, Europe: 0.15, Other: 0.05 }, yf: 'AVGO', factorTags: ['AI capex', 'Growth', 'US mega-cap'] },
-    { t: 'EWSP.L', name: 'iShares S&P 500 Equal Weight ETF', qty: 509, cost: 5.84, px: 6.12, ccy: 'GBP', wStated: 0.056, valueGBP: 3114.57, gain: 143.54, div: 0, tr: 143.54,
+    { t: 'EWSP.L', name: 'iShares S&P 500 Equal Weight ETF', qty: 509, cost: 5.837, px: 6.12, ccy: 'GBP', wStated: 0.056, valueGBP: 3114.57, gain: 143.54, div: 0, tr: 143.54,
       cls: 'Equity fund', sector: 'Diversified', sub: 'US equal-weight large cap', listing: 'LSE', country: 'United States', region: 'US', econCcy: { USD: 1 }, revGeo: { US: 0.7, Other: 0.3 }, yf: 'EWSP.L', proxy: 'RSP', shortHistory: true,
       lookSector: { 'Industrials': 0.155, 'Financials': 0.145, 'Information Technology': 0.14, 'Health Care': 0.125, 'Consumer Discretionary': 0.10, 'Consumer Staples': 0.075, 'Utilities': 0.06, 'Real Estate': 0.06, 'Materials': 0.05, 'Energy': 0.045, 'Communication Services': 0.045 }, lookCountry: { 'United States': 1 }, factorTags: ['US value tilt', 'Size (vs cap-weight)'] },
     { t: 'ZPRX.DE', name: 'SPDR MSCI Europe Small Cap Value Weighted ETF', qty: 51, cost: 60.95, px: 72.22, ccy: 'EUR', wStated: 0.055, valueGBP: 3073.72, gain: 479.66, div: 0, tr: 479.66,
       cls: 'Equity fund', sector: 'Diversified', sub: 'European small-cap value', listing: 'Xetra', country: 'Europe', region: 'Europe', econCcy: { EUR: 0.55, GBP: 0.3, Other: 0.15 }, revGeo: { Europe: 0.85, Other: 0.15 }, yf: 'ZPRX.DE',
       lookSector: { 'Industrials': 0.24, 'Financials': 0.16, 'Consumer Discretionary': 0.12, 'Materials': 0.09, 'Real Estate': 0.09, 'Information Technology': 0.07, 'Health Care': 0.06, 'Consumer Staples': 0.05, 'Communication Services': 0.04, 'Energy': 0.04, 'Utilities': 0.04 }, lookCountry: { 'United Kingdom': 0.32, 'Sweden': 0.11, 'Germany': 0.09, 'Switzerland': 0.07, 'France': 0.07, 'Italy': 0.07, 'Netherlands': 0.04, 'Spain': 0.04, 'Other Europe': 0.19 }, factorTags: ['European small cap', 'Value'] },
-    { t: 'VIE.PA', name: 'Veolia Environnement', qty: 104.04, cost: 31.30, px: 34.76, ccy: 'EUR', wStated: 0.054, valueGBP: 3017.95, gain: 300.41, div: 135.81, tr: 436.21,
+    { t: 'VIE.PA', name: 'Veolia Environnement', qty: 104.0390135, cost: 31.30, px: 34.76, ccy: 'EUR', wStated: 0.054, valueGBP: 3017.95, gain: 300.41, div: 135.81, tr: 436.21,
       cls: 'Equity', sector: 'Utilities', sub: 'Water, waste & energy services', listing: 'Euronext Paris', country: 'France', region: 'Europe', econCcy: { EUR: 0.6, USD: 0.15, GBP: 0.1, Other: 0.15 }, revGeo: { France: 0.2, 'Europe ex-France': 0.4, 'Rest of world': 0.4 }, yf: 'VIE.PA', factorTags: ['Regulated/contracted cash flows', 'Environmental regulation'] },
     { t: 'ADYEN.AS', name: 'Adyen', qty: 4, cost: 817.40, px: 872.80, ccy: 'EUR', wStated: 0.052, valueGBP: 2913.48, gain: 184.93, div: 0, tr: 184.93,
       cls: 'Equity', sector: 'Financials', sub: 'Payments platform', listing: 'Euronext Amsterdam', country: 'Netherlands', region: 'Europe', econCcy: { EUR: 0.55, USD: 0.3, Other: 0.15 }, revGeo: { Europe: 0.55, 'North America': 0.26, APAC: 0.12, LatAm: 0.07 }, yf: 'ADYEN.AS', factorTags: ['Growth', 'Consumer spending', 'E-commerce'] },
@@ -826,15 +826,15 @@ const Content = (() => {
     { t: 'JAGI.L', name: 'JPMorgan Asia Growth & Income', qty: 520, cost: 519.80, px: 502.00, ccy: 'GBX', wStated: 0.047, valueGBP: 2610.40, gain: -92.56, div: 104.42, tr: 11.86,
       cls: 'Equity fund', sector: 'Diversified', sub: 'Asia ex-Japan equity investment trust', listing: 'LSE', country: 'Asia ex-Japan', region: 'EM', econCcy: { CNY: 0.3, TWD: 0.22, INR: 0.17, KRW: 0.12, Other: 0.19 }, revGeo: { China: 0.3, Taiwan: 0.22, India: 0.17, Korea: 0.12, Other: 0.19 }, yf: 'JAGI.L',
       lookSector: { 'Information Technology': 0.33, 'Financials': 0.22, 'Consumer Discretionary': 0.12, 'Communication Services': 0.08, 'Industrials': 0.07, 'Health Care': 0.04, 'Consumer Staples': 0.03, 'Materials': 0.03, 'Real Estate': 0.03, 'Energy': 0.02, 'Utilities': 0.03 }, lookCountry: { 'China': 0.3, 'Taiwan': 0.22, 'India': 0.17, 'South Korea': 0.12, 'Hong Kong': 0.06, 'Indonesia': 0.04, 'Singapore': 0.03, 'Other': 0.06 }, factorTags: ['EM Asia', 'AI supply chain (Taiwan/Korea)', 'China policy'] },
-    { t: 'KAP.L', name: 'Kazatomprom (GDR)', qty: 56, cost: 55.38, px: 60.30, ccy: 'USD', wStated: 0.046, valueGBP: 2560.15, gain: 208.72, div: 128.01, tr: 336.73,
+    { t: 'KAP.L', name: 'Kazatomprom (GDR)', qty: 56, cost: 55.384, px: 60.30, ccy: 'USD', wStated: 0.046, valueGBP: 2560.15, gain: 208.72, div: 128.01, tr: 336.73,
       cls: 'Equity', sector: 'Energy', sub: 'Uranium mining', listing: 'LSE (USD GDR)', country: 'Kazakhstan', region: 'EM', econCcy: { USD: 0.7, KZT: 0.3 }, revGeo: { China: 0.4, Europe: 0.2, US: 0.15, Other: 0.25 }, yf: 'KAP.L', factorTags: ['Uranium price', 'Nuclear policy', 'Kazakh regulation'] },
-    { t: 'TEZNY', name: 'Terna (ADR)', qty: 100.09, cost: 30.06, px: 33.07, ccy: 'USD', wStated: 0.045, valueGBP: 2509.41, gain: 228.40, div: 112.92, tr: 341.33,
+    { t: 'TEZNY', name: 'Terna (ADR)', qty: 100.086556, cost: 30.06, px: 33.07, ccy: 'USD', wStated: 0.045, valueGBP: 2509.41, gain: 228.40, div: 112.92, tr: 341.33,
       cls: 'Equity', sector: 'Utilities', sub: 'Regulated electricity transmission', listing: 'OTC ADR (underlying TRN.MI)', country: 'Italy', region: 'Europe', econCcy: { EUR: 1 }, revGeo: { Italy: 0.95, Other: 0.05 }, yf: 'TRN.MI', adrNote: 'ADR; economic exposure is EUR. Pipeline uses the Milan ordinary line (TRN.MI) for history; confirm the ADR ratio in build_data.py.', factorTags: ['Regulated returns (ARERA)', 'BTP yields', 'Electrification capex'] },
-    { t: 'NOV.DE', name: 'Novo Nordisk', qty: 75.5, cost: 41.79, px: 38.35, ccy: 'EUR', wStated: 0.043, valueGBP: 2415.98, gain: -217.31, div: 72.48, tr: -144.83,
+    { t: 'NOV.DE', name: 'Novo Nordisk', qty: 75.5, cost: 41.794, px: 38.35, ccy: 'EUR', wStated: 0.043, valueGBP: 2415.98, gain: -217.31, div: 72.48, tr: -144.83,
       cls: 'Equity', sector: 'Health Care', sub: 'Pharmaceuticals (GLP-1)', listing: 'Xetra (DKK ordinary on Nasdaq Copenhagen)', country: 'Denmark', region: 'Europe', econCcy: { USD: 0.58, EUR: 0.15, DKK: 0.05, Other: 0.22 }, revGeo: { US: 0.58, Europe: 0.15, China: 0.08, Other: 0.19 }, yf: 'NOVO-B.CO', factorTags: ['US drug pricing', 'GLP-1 competition'] },
     { t: 'SGLN.L', name: 'iShares Physical Gold ETC', qty: 42, cost: 4942.00, px: 5696.00, ccy: 'GBX', wStated: 0.043, valueGBP: 2392.32, gain: 316.68, div: 0, tr: 316.68,
       cls: 'Commodity', sector: 'Precious metals', sub: 'Physical gold', listing: 'LSE', country: 'n/a', region: 'Global', econCcy: { USD: 1 }, revGeo: {}, yf: 'SGLN.L', factorTags: ['Real yields', 'USD', 'Central-bank reserves'] },
-    { t: 'THEON.AS', name: 'Theon International', qty: 102.67, cost: 32.16, px: 27.82, ccy: 'EUR', wStated: 0.043, valueGBP: 2383.73, gain: -371.87, div: 0, tr: -371.87,
+    { t: 'THEON.AS', name: 'Theon International', qty: 102.67477369, cost: 32.16, px: 27.82, ccy: 'EUR', wStated: 0.043, valueGBP: 2383.73, gain: -371.87, div: 0, tr: -371.87,
       cls: 'Equity', sector: 'Industrials', sub: 'Defence electro-optics (night vision)', listing: 'Euronext Amsterdam', country: 'Greece / Netherlands', region: 'Europe', econCcy: { EUR: 0.9, Other: 0.1 }, revGeo: { Europe: 0.8, Other: 0.2 }, yf: 'THEON.AS', shortHistory: true, factorTags: ['European defence budgets', 'Small cap'] },
     { t: 'ACT.DE', name: 'AlzChem Group', qty: 20, cost: 163.20, px: 139.20, ccy: 'EUR', wStated: 0.042, valueGBP: 2323.30, gain: -400.57, div: 23.23, tr: -377.34,
       cls: 'Equity', sector: 'Materials', sub: 'Specialty chemicals (nitroguanidine, creatine)', listing: 'Xetra', country: 'Germany', region: 'Europe', econCcy: { EUR: 0.7, USD: 0.2, Other: 0.1 }, revGeo: { Germany: 0.3, 'Europe ex-Germany': 0.3, US: 0.2, Asia: 0.15, Other: 0.05 }, yf: 'ACT.DE', factorTags: ['European ammunition demand', 'Energy costs', 'Small cap'] },
@@ -1292,6 +1292,7 @@ function toast(msg, err = false) { const t = $('#toast'); t.textContent = msg; t
 /* ---------- universe & weights ---------- */
 const H = Content.HOLDINGS; const C = Content.CANDIDATES;
 const BY_T = {}; H.forEach((h) => (BY_T[h.t] = h)); C.forEach((c) => (BY_T[c.t] = c));
+App.state.labEdited = false;
 const TOTAL = H.reduce((a, h) => a + h.valueGBP, 0);
 H.forEach((h) => { h.w = h.valueGBP / TOTAL; App.state.base[h.t] = h.w; });
 App.state.weights = { ...App.state.base };
@@ -1315,6 +1316,78 @@ function snapshot() {
   const implied = H.map((h) => { const local = h.qty * h.px / (h.ccy === 'GBX' ? 100 : 1); const rate = h.ccy === 'USD' ? fx.GBPUSD : h.ccy === 'EUR' ? fx.GBPEUR : 1; const impliedGBP = local / rate; return { t: h.t, impliedGBP, diff: h.valueGBP - impliedGBP }; });
   return { fx, sumVal, sumGain, sumDiv, sumTR, cost, trPct: sumTR / cost, statedSum, implied, reconciles: Math.abs(sumVal - Content.REPORTED.total) < 0.05 };
 }
+
+/* ---------- live prices (same Cloudflare Worker as the ISA tracker) ---------- */
+const WORKER_URL = 'https://isaprices.arnavbchowdhury.workers.dev';
+App.live = { status: 'idle', at: null, px: {}, src: {}, fx: null, msg: '', nLive: 0 };
+function snapFx() { const s = snapshot(); return { USD: s.fx.GBPUSD, EUR: s.fx.GBPEUR }; }   // units of currency per £1
+function perGBP(ccy) { const f = App.live.fx || snapFx(); return ccy === 'GBX' ? 100 : ccy === 'GBP' ? 1 : f[ccy] || NaN; }
+function normaliseQuote(h, p, cur) {   // Yahoo sometimes quotes a London line in pounds instead of pence, or vice versa
+  if (h.ccy === 'GBX') { if (cur === 'GBP') p *= 100; else if (cur !== 'GBp' && cur !== 'GBX' && h.px > 100 && p < h.px / 20) p *= 100; }
+  else if (h.ccy === 'GBP') { if (cur === 'GBp' || cur === 'GBX') p /= 100; else if (p > h.px * 20) p /= 100; }
+  return p;
+}
+function fallbackClose(h) {   // latest close for the same line from the published data file
+  const d = App.state.data; if (!d || !d.extra || (h.yf && h.yf !== h.t)) return null;
+  const ex = d.extra[h.t]; if (!ex || !ex.px_local) return null;
+  for (let i = ex.px_local.length - 1; i >= 0; i--) if (Engine.isNum(ex.px_local[i])) {
+    let p = ex.px_local[i] * (h.ccy === 'GBX' ? 100 : 1);
+    if (p > h.px * 20) p /= 100; else if (p < h.px / 20) p *= 100;
+    return { px: p, date: d.dates[i] };
+  }
+  return null;
+}
+function dataFx() {
+  const d = App.state.data; if (!d || !d.factors) return null;
+  const last = (k) => { const s = d.factors[k]; if (!s) return NaN; for (let i = s.length - 1; i >= 0; i--) if (Engine.isNum(s[i])) return s[i]; return NaN; };
+  const u = last('GBPUSD'), e = last('GBPEUR'); return Engine.isNum(u) && Engine.isNum(e) ? { USD: u, EUR: e } : null;
+}
+async function refreshLive(manual = false) {
+  if (App.live.status === 'loading') return;
+  App.live.status = 'loading'; updatePricePill();
+  const px = {}, src = {}; let fx = null, ok = 0, msg = '';
+  try {
+    const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 20000);
+    const r = await fetch(`${WORKER_URL}?symbols=${encodeURIComponent(H.map((h) => h.t).join(','))}`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!r.ok) throw new Error('price service returned ' + r.status);
+    const data = await r.json(); if (data.error) throw new Error(data.error);
+    for (const h of H) { const q = data[h.t]; if (q && q.price > 0) { px[h.t] = normaliseQuote(h, q.price, q.currency); src[h.t] = 'live'; ok++; } }
+    if (data.__fx && data.__fx.USD > 0 && data.__fx.EUR > 0) fx = { USD: 1 / data.__fx.USD, EUR: 1 / data.__fx.EUR };   // Worker gives £ per unit
+  } catch (e) { msg = e.name === 'AbortError' ? 'price service timed out' : e.message; }
+  for (const h of H) if (!px[h.t]) { const fb = fallbackClose(h); if (fb) { px[h.t] = fb.px; src[h.t] = 'close ' + fb.date; } else { px[h.t] = h.px; src[h.t] = 'statement 16 Nov'; } }
+  App.live = { status: ok === H.length ? 'ok' : ok > 0 ? 'partial' : 'fallback', at: new Date(), px, src, fx: fx || dataFx(), fxLive: !!fx, msg, nLive: ok };
+  applyLiveWeights(); updatePricePill();
+  if (manual) toast(ok === H.length ? 'All prices updated.' : ok > 0 ? `${ok} of ${H.length} prices live; the rest use the latest close.` : `Live prices unavailable (${msg}); using latest closes.`, ok === 0);
+}
+function liveRows() {
+  const L = App.live; const useLive = L.status !== 'idle' && L.status !== 'loading' || (L.px && Object.keys(L.px).length);
+  const rows = H.map((h) => {
+    const cost = h.valueGBP - h.gain;   // GBP cost basis from your statement (purchase-date FX)
+    const px = useLive && Engine.isNum(L.px[h.t]) ? L.px[h.t] : h.px;
+    const val = useLive ? (h.qty * px) / perGBP(h.ccy) : h.valueGBP;
+    const gain = val - cost;
+    return { ...h, livePx: px, liveVal: val, cost, liveGain: gain, liveTR: gain + h.div, liveTRpct: (gain + h.div) / cost, src: useLive ? L.src[h.t] : 'statement 16 Nov' };
+  });
+  const tot = Engine.sum(rows.map((r) => r.liveVal)); rows.forEach((r) => (r.liveW = r.liveVal / tot));
+  const cost = Engine.sum(rows.map((r) => r.cost)), gain = Engine.sum(rows.map((r) => r.liveGain)), div = Engine.sum(rows.map((r) => r.div));
+  return { rows, tot, cost, gain, div, tr: gain + div };
+}
+function applyLiveWeights() {
+  const lv = liveRows(); const nb = {}; lv.rows.forEach((r) => (nb[r.t] = r.liveW));
+  App.state.base = nb;
+  if (!App.state.labEdited) { App.state.weights = { ...nb }; App.state.extra = []; }
+  invalidate(); rerenderAll();
+}
+function updatePricePill() {
+  const p = $('#pricePill'); if (!p) return; const L = App.live;
+  if (L.status === 'loading') { p.className = 'pill'; p.innerHTML = '<span class="dot"></span>Fetching live prices…'; return; }
+  if (L.status === 'idle') { p.className = 'pill'; p.innerHTML = '<span class="dot"></span>Statement prices (16 Nov)'; return; }
+  const t = L.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  p.className = 'pill ' + (L.status === 'ok' ? 'ok' : 'warn'); p.title = L.msg || '';
+  p.innerHTML = `<span class="dot"></span>${L.status === 'ok' ? 'Live prices' : L.status === 'partial' ? `${L.nLive}/${H.length} live` : 'Latest closes'} · ${t}`;
+}
+
 function exposures(w = App.state.weights) {
   const tickers = activeTickers(w); const out = { cls: {}, sector: {}, listing: {}, revenue: {}, listCcy: {}, econCcy: {}, region: {} };
   const add = (o, k, v) => (o[k] = (o[k] || 0) + v);
@@ -1564,8 +1637,8 @@ function bindDrawer() {
   $('#exportState').addEventListener('click', () => downloadText('portfolio_lab_state.json', JSON.stringify({ weights: App.state.weights, extra: App.state.extra, saved: App.state.saved, erManual: App.state.erManual, loadings: App.state.loadings, fiInputs: App.state.fiInputs, rf: App.state.rf }, null, 2), 'application/json'));
   $('#importState').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { const s = JSON.parse(await f.text()); Object.assign(App.state, { weights: s.weights || App.state.weights, extra: s.extra || [], saved: s.saved || [], erManual: s.erManual || {}, loadings: s.loadings || App.state.loadings, fiInputs: s.fiInputs || App.state.fiInputs, rf: s.rf || App.state.rf }); invalidate(); rerenderAll(); toast('Lab state restored.'); } catch (err) { toast('Could not read state file: ' + err.message, true); } });
 }
-function persist() { try { localStorage.setItem('pa_state_v1', JSON.stringify({ weights: App.state.weights, extra: App.state.extra, saved: App.state.saved, erManual: App.state.erManual, fiInputs: App.state.fiInputs, labName: App.state.labName })); } catch (e) { /* storage unavailable */ } }
-function restore() { try { const s = JSON.parse(localStorage.getItem('pa_state_v1') || 'null'); if (s) Object.assign(App.state, s); } catch (e) { /* ignore */ } }
+function persist() { try { localStorage.setItem('pa_state_v1', JSON.stringify({ weights: App.state.weights, extra: App.state.extra, saved: App.state.saved, erManual: App.state.erManual, fiInputs: App.state.fiInputs, labName: App.state.labName, labEdited: App.state.labEdited })); } catch (e) { /* storage unavailable */ } }
+function restore() { try { const s = JSON.parse(localStorage.getItem('pa_state_v1') || 'null'); if (s) { Object.assign(App.state, s); if (!App.state.labEdited) { App.state.weights = { ...App.state.base }; App.state.extra = []; } } } catch (e) { /* ignore */ } }
 </script>
 <script>/* ============================================================
    Views (part 1)
@@ -1593,19 +1666,21 @@ function expectedReturnsVec(tickers, a) {
 }
 
 /* ======================= OVERVIEW ======================= */
+function priceNote() { const L = App.live; if (L.status === 'idle') return 'Statement prices, 16 Nov 2026'; if (L.status === 'loading') return 'Fetching live prices…'; const t = L.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); return L.status === 'ok' ? `All ${H.length} prices live at ${t}` : L.status === 'partial' ? `${L.nLive} of ${H.length} live at ${t}; others latest close` : `Live service unavailable; latest closes at ${t}`; }
+
 Views.overview = (v) => {
-  const s = snapshot(); const ex = exposures(); const w = activeTickers().map((t) => App.state.weights[t]);
+  const s = snapshot(); const LV = liveRows(); const ex = exposures(); const w = activeTickers().map((t) => App.state.weights[t]);
   const a = analytics();
   const clusters = clusterWeights().sort((x, y) => y.weight - x.weight);
   let html = `<div class="panel">
-    <h2>Portfolio snapshot · ${Content.SNAPSHOT_DATE}</h2>
+    <h2>Portfolio today</h2>
     <div class="statrow">
-      ${statCard('Total value', F.gbp(s.sumVal, 2), s.reconciles ? 'Reconciles to reported £55,812.83 (1p rounding)' : '<span class="warn">Does not reconcile with reported total</span>')}
-      ${statCard('Cumulative total return', F.pctS(s.trPct), F.gbpS(s.sumTR, 2) + ' on cost of ' + F.gbp(s.cost, 0) + ' (not annualised)')}
-      ${statCard('Capital gain / dividends', F.gbpS(s.sumGain, 0) + ' / ' + F.gbp(s.sumDiv, 0), 'Dividends are ' + F.pct(s.sumDiv / s.sumTR, 0) + ' of total return')}
+      ${statCard('Portfolio value', F.gbp(LV.tot, 2), priceNote())}
+      ${statCard('Total return since purchase', F.pctS(LV.tr / LV.cost), F.gbpS(LV.tr, 0) + ' on cost of ' + F.gbp(LV.cost, 0) + ' · cumulative, not annualised')}
+      ${statCard('Capital gain / dividends', F.gbpS(LV.gain, 0) + ' / ' + F.gbp(LV.div, 0), 'Dividends as reported to 16 Nov')}
       ${statCard('Holdings', H.length, 'Effective number ' + F.num(Engine.effectiveN(w), 1) + ' · HHI ' + F.num(Engine.hhi(w) * 10000, 0))}
       ${statCard('Largest position', F.pct(Math.max(...w)), meta(activeTickers()[w.indexOf(Math.max(...w))]).name)}
-      ${statCard('Implied FX in snapshot', F.num(s.fx.GBPUSD, 4) + ' USD · ' + F.num(s.fx.GBPEUR, 4) + ' EUR', 'per GBP, derived from values')}
+      ${statCard('FX used', F.num(perGBP('USD'), 4) + ' USD · ' + F.num(perGBP('EUR'), 4) + ' EUR', App.live.fxLive ? 'per £1, live' : App.live.fx ? 'per £1, latest close' : 'per £1, from your 16 Nov statement')}
     </div>
     <div class="grid c2">
       <div><h3>Allocation by asset class</h3><div id="ov_cls" class="chart short"></div></div>
@@ -1683,17 +1758,18 @@ function executiveAssessment(a, clusters, ex) {
 /* ======================= HOLDINGS ======================= */
 Views.holdings = (v) => {
   const s = snapshot(); const a = analytics();
-  v.innerHTML = `<div class="panel"><h2>All holdings</h2><p class="lead">Exact weights are recomputed from market values. Click a name to expand the research profile. Stated weights summed to ${F.pct(s.statedSum)} because of rounding.</p><div id="htbl"></div></div>
+  v.innerHTML = `<div class="panel"><h2>All holdings</h2><p class="lead">Values use your share counts × the latest prices (${F.esc(priceNote())}). Cost basis and dividends are from your 16 Nov statement. Click a name to expand its research profile.</p><div id="htbl"></div></div>
   <div class="panel"><h2>Reconciliation of the snapshot ${isMeasured()}</h2><div id="recon"></div></div>`;
-  const rows = H.map((h) => ({ ...h, w: h.valueGBP / TOTAL, trPct: h.tr / (h.valueGBP - h.gain), vol: a && a.ok && a.stats[h.t] ? a.stats[h.t].vol : NaN, beta: a && a.ok && a.stats[h.t] ? a.stats[h.t].beta : NaN, rcp: a && a.ok ? a.rc.pct[a.tickers.indexOf(h.t)] : NaN }));
+  const LV = liveRows();
+  const rows = LV.rows.map((h) => ({ ...h, w: h.liveW, valueGBP: h.liveVal, px: h.livePx, gain: h.liveGain, tr: h.liveTR, trPct: h.liveTRpct, vol: a && a.ok && a.stats[h.t] ? a.stats[h.t].vol : NaN, beta: a && a.ok && a.stats[h.t] ? a.stats[h.t].beta : NaN, rcp: a && a.ok ? a.rc.pct[a.tickers.indexOf(h.t)] : NaN }));
   const cols = [
     { k: 'name', label: 'Holding', align: 'l', fmt: (x, r) => `<strong>${F.esc(x)}</strong><div class="dim small">${r.t} · ${F.esc(r.sub)}</div>` },
-    { k: 'cls', label: 'Class', align: 'l' }, { k: 'w', label: 'Weight', fmt: (x) => F.pct(x, 2) }, { k: 'valueGBP', label: 'Value', fmt: (x) => F.gbp(x, 0) },
-    { k: 'px', label: 'Price', fmt: (x, r) => F.num(x, r.ccy === 'GBX' ? 0 : 2) + ' ' + r.ccy }, { k: 'cost', label: 'Avg cost', fmt: (x, r) => F.num(x, r.ccy === 'GBX' ? 0 : 2) },
+    { k: 'cls', label: 'Class', align: 'l' }, { k: 'qty', label: 'Shares', fmt: (x) => (x % 1 ? x.toFixed(4) : String(x)) }, { k: 'w', label: 'Weight', fmt: (x) => F.pct(x, 2) }, { k: 'valueGBP', label: 'Value', fmt: (x) => F.gbp(x, 0) },
+    { k: 'px', label: 'Price', fmt: (x, r) => F.num(x, r.ccy === 'GBX' ? 0 : 2) + ' ' + r.ccy }, { k: 'src', label: 'Price source', align: 'l', fmt: (x) => (x === 'live' ? '<span class="pos">live</span>' : `<span class="warn">${F.esc(x)}</span>`) }, { k: 'cost', label: 'Avg cost', fmt: (x, r) => F.num(r.cost / r.qty * perGBP(r.ccy), r.ccy === 'GBX' ? 0 : 2), sortVal: (r) => r.cost },
     { k: 'gain', label: 'Capital gain', fmt: (x) => F.gbpS(x, 0), cls: F.cls }, { k: 'div', label: 'Dividends', fmt: (x) => F.gbp(x, 0) }, { k: 'tr', label: 'Total return', fmt: (x) => F.gbpS(x, 0), cls: F.cls }, { k: 'trPct', label: 'TR % (cum.)', fmt: (x) => F.pctS(x), cls: F.cls },
     { k: 'vol', label: 'Ann. vol', fmt: (x) => F.pct(x) }, { k: 'beta', label: 'Beta', fmt: (x) => F.num(x) }, { k: 'rcp', label: 'Risk share', fmt: (x) => F.pct(x) },
   ];
-  $('#htbl').appendChild(table(cols, rows, { id: 'holdings', filter: true, sort: 'w', expand: profileHTML, foot: { name: 'Total', w: F.pct(1, 1), valueGBP: F.gbp(TOTAL, 0), gain: F.gbpS(s.sumGain, 0), div: F.gbp(s.sumDiv, 0), tr: F.gbpS(s.sumTR, 0), trPct: F.pctS(s.trPct) } }));
+  $('#htbl').appendChild(table(cols, rows, { id: 'holdings', filter: true, sort: 'w', expand: profileHTML, foot: { name: 'Total', w: F.pct(1, 1), valueGBP: F.gbp(LV.tot, 0), gain: F.gbpS(LV.gain, 0), div: F.gbp(LV.div, 0), tr: F.gbpS(LV.tr, 0), trPct: F.pctS(LV.tr / LV.cost) } }));
   const rec = `<div class="grid c2"><div><table class="t"><tr><td class="l">Sum of holding values</td><td>${F.gbp(s.sumVal, 2)}</td><td class="l dim">reported £55,812.83</td></tr><tr><td class="l">Sum of capital gains</td><td>${F.gbpS(s.sumGain, 2)}</td><td class="l dim">reported +£1,984.51</td></tr><tr><td class="l">Sum of dividends</td><td>${F.gbp(s.sumDiv, 2)}</td><td class="l dim">reported £1,259.75</td></tr><tr><td class="l">Total return</td><td>${F.gbpS(s.sumTR, 2)} (${F.pctS(s.trPct, 2)})</td><td class="l dim">reported +£3,244.27 (+6.03%)</td></tr><tr><td class="l">Implied cost basis</td><td>${F.gbp(s.cost, 2)}</td><td class="l dim">value − capital gain</td></tr><tr><td class="l">Implied GBP/USD · GBP/EUR</td><td>${F.num(s.fx.GBPUSD, 4)} · ${F.num(s.fx.GBPEUR, 4)}</td><td class="l dim">consistent across USD and EUR lines to 4 d.p.</td></tr></table>
   <p class="small muted" style="margin-top:8px">All totals match the reported figures to within one penny of rounding. The cumulative +6.03% is a since-inception money-weighted-style figure on cost, not an annualised return, and cannot be annualised without the transaction dates.</p></div>
   <div><h4>Quantity × price check (largest residuals)</h4><table class="t">${s.implied.map((x) => ({ ...x })).sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff)).slice(0, 6).map((x) => `<tr><td class="l">${x.t}</td><td>${F.gbp(x.impliedGBP, 2)}</td><td class="${F.cls(x.diff)}">${F.gbpS(x.diff, 2)}</td></tr>`).join('')}</table><p class="small muted" style="margin-top:8px">Residuals arise from rounded prices/quantities (e.g. EWSP price to 2 d.p.) and are immaterial.</p>
@@ -2316,7 +2392,8 @@ Views.opportunities = (v) => {
 
 /* ======================= PORTFOLIO LAB ======================= */
 function labPush() { App.state.history.push(JSON.stringify({ w: App.state.weights, e: App.state.extra })); if (App.state.history.length > 50) App.state.history.shift(); }
-function labSet(w, extra) { App.state.weights = w; if (extra) App.state.extra = extra; invalidate(); persist(); $('#weightPill').textContent = 'Weights: ' + (isSnapshotWeights() ? 'snapshot' : App.state.labName + ' (edited)'); RENDERED.clear(); $$('.view').forEach((x) => (x.innerHTML = '')); renderView(App.view); }
+function labSet(w, extra, edited = true) { App.state.weights = w; if (extra) App.state.extra = extra; App.state.labEdited = edited; invalidate(); persist(); setWeightPill(); RENDERED.clear(); $$('.view').forEach((x) => (x.innerHTML = '')); renderView(App.view); }
+function setWeightPill() { $('#weightPill').textContent = 'Weights: ' + (App.state.labEdited ? App.state.labName + ' (edited)' : 'current holdings'); }
 function isSnapshotWeights() { return universe().every((t) => Math.abs((App.state.weights[t] || 0) - (App.state.base[t] || 0)) < 1e-6); }
 function labNormalise(w) { const s = Engine.sum(Object.values(w)); if (s <= 0) return w; const o = {}; for (const k in w) o[k] = w[k] / s; return o; }
 function labAdd(t, wt, fund = null) { labPush(); const w = { ...App.state.weights }; const extra = App.state.extra.slice(); if (!H.some((h) => h.t === t) && !extra.includes(t)) extra.push(t); const cur = w[t] || 0; const need = wt - cur; if (fund && w[fund] >= need) { w[fund] -= need; w[t] = wt; } else { for (const k in w) if (k !== t) w[k] = w[k] * (1 - need / (1 - cur)); w[t] = wt; } labSet(labNormalise(w), extra); }
@@ -2327,11 +2404,11 @@ Views.lab = (v) => {
   <div class="controls"><label>Name <input type="text" id="labName" value="${F.esc(App.state.labName)}"></label><label>Funding source for increases <select id="labFund"><option value="">Pro rata from all others</option>${tickers.map((t) => `<option value="${t}">${label(t)}</option>`).join('')}</select></label><button class="btn small" id="labNorm">Rebalance to 100%</button><button class="btn small" id="labUndo">Undo</button><button class="btn small danger" id="labReset">Reset to snapshot</button><label>Add <select id="labAddSel"><option value="">instrument…</option>${C.filter((c) => !tickers.includes(c.t)).map((c) => `<option value="${c.t}">${F.esc(c.name)} (${c.t})</option>`).join('')}</select></label><button class="btn small" id="labAddBtn">Add at 3%</button></div>
   <div class="controls"><span class="small muted">Load:</span>${Object.entries(Content.ALT_PORTFOLIOS).map(([k, p]) => `<button class="btn small" data-alt="${k}">${p.name}</button>`).join('')}<span class="small muted" style="margin-left:12px">Saved:</span><span id="labSaved"></span><button class="btn small" id="labSave">Save current as scenario</button></div>
   <div class="weditor" id="labEditor"></div></div>
-  <div class="panel"><h2>Snapshot versus ${F.esc(App.state.labName)}</h2><div id="labCmp"></div></div>`;
+  <div class="panel"><h2>Current versus ${F.esc(App.state.labName)}</h2><div id="labCmp"></div></div>`;
   const editor = $('#labEditor');
   const draw = () => {
     const ws = Engine.sum(tickers.map((t) => w[t] || 0));
-    editor.innerHTML = `<div class="tablewrap"><table class="t"><thead><tr><th class="l">Holding</th><th>Snapshot</th><th>Proposed</th><th>Change</th><th class="l">Adjust</th><th>Value at £${TOTAL.toLocaleString('en-GB', { maximumFractionDigits: 0 })}</th><th></th></tr></thead><tbody>${tickers.map((t) => `<tr><td class="l">${label(t)}<div class="dim small">${t}</div></td><td>${F.pct(App.state.base[t] || 0)}</td><td><input type="number" step="0.1" min="0" max="100" data-w="${t}" value="${((w[t] || 0) * 100).toFixed(2)}"> %</td><td class="${F.cls((w[t] || 0) - (App.state.base[t] || 0))}">${F.pctS((w[t] || 0) - (App.state.base[t] || 0))}</td><td class="l"><input type="range" min="0" max="12" step="0.1" data-r="${t}" value="${((w[t] || 0) * 100).toFixed(1)}"></td><td>${F.gbp((w[t] || 0) / Math.max(ws, 1e-9) * TOTAL, 0)}</td><td><button class="btn small" data-rm="${t}">Remove</button></td></tr>`).join('')}</tbody><tfoot><tr><td class="l">Total</td><td>${F.pct(1)}</td><td class="wsum ${Math.abs(ws - 1) < 0.0005 ? 'good' : 'bad'}">${F.pct(ws, 2)}</td><td colspan="4" class="l small muted">${Math.abs(ws - 1) < 0.0005 ? 'Fully invested.' : 'Weights do not sum to 100% — use Rebalance or adjust.'}</td></tr></tfoot></table></div>`;
+    editor.innerHTML = `<div class="tablewrap"><table class="t"><thead><tr><th class="l">Holding</th><th>Current</th><th>Proposed</th><th>Change</th><th class="l">Adjust</th><th>Value at £${TOTAL.toLocaleString('en-GB', { maximumFractionDigits: 0 })}</th><th></th></tr></thead><tbody>${tickers.map((t) => `<tr><td class="l">${label(t)}<div class="dim small">${t}</div></td><td>${F.pct(App.state.base[t] || 0)}</td><td><input type="number" step="0.1" min="0" max="100" data-w="${t}" value="${((w[t] || 0) * 100).toFixed(2)}"> %</td><td class="${F.cls((w[t] || 0) - (App.state.base[t] || 0))}">${F.pctS((w[t] || 0) - (App.state.base[t] || 0))}</td><td class="l"><input type="range" min="0" max="12" step="0.1" data-r="${t}" value="${((w[t] || 0) * 100).toFixed(1)}"></td><td>${F.gbp((w[t] || 0) / Math.max(ws, 1e-9) * TOTAL, 0)}</td><td><button class="btn small" data-rm="${t}">Remove</button></td></tr>`).join('')}</tbody><tfoot><tr><td class="l">Total</td><td>${F.pct(1)}</td><td class="wsum ${Math.abs(ws - 1) < 0.0005 ? 'good' : 'bad'}">${F.pct(ws, 2)}</td><td colspan="4" class="l small muted">${Math.abs(ws - 1) < 0.0005 ? 'Fully invested.' : 'Weights do not sum to 100% — use Rebalance or adjust.'}</td></tr></tfoot></table></div>`;
     const setW = (t, val) => { const fund = $('#labFund').value; const nv = Math.max(0, Math.min(1, val / 100)); labPush(); const delta = nv - (w[t] || 0); if (fund && fund !== t && (w[fund] || 0) - delta >= 0) { w[fund] = (w[fund] || 0) - delta; } w[t] = nv; };
     $$('input[data-w]', editor).forEach((i) => i.addEventListener('change', () => { setW(i.dataset.w, parseFloat(i.value) || 0); labSet(w); }));
     $$('input[data-r]', editor).forEach((i) => i.addEventListener('change', () => { setW(i.dataset.r, parseFloat(i.value) || 0); labSet(w); }));
@@ -2341,7 +2418,7 @@ Views.lab = (v) => {
   $('#labName').addEventListener('change', (e) => { App.state.labName = e.target.value || 'Proposed'; persist(); });
   $('#labNorm').addEventListener('click', () => { labPush(); labSet(labNormalise(w)); });
   $('#labUndo').addEventListener('click', () => { const h = App.state.history.pop(); if (!h) { toast('Nothing to undo.'); return; } const s = JSON.parse(h); labSet(s.w, s.e); });
-  $('#labReset').addEventListener('click', () => { labPush(); App.state.labName = 'Proposed'; labSet({ ...App.state.base }, []); });
+  $('#labReset').addEventListener('click', () => { labPush(); App.state.labName = 'Proposed'; labSet({ ...App.state.base }, [], false); });
   $('#labAddBtn').addEventListener('click', () => { const t = $('#labAddSel').value; if (!t) return; labAdd(t, 0.03, $('#labFund').value || null); });
   $$('button[data-alt]').forEach((b) => b.addEventListener('click', () => { const p = Content.ALT_PORTFOLIOS[b.dataset.alt]; labLoad(Object.fromEntries(Object.entries(p.weights).map(([k, x]) => [k, x / 100])), p.name); }));
   const drawSaved = () => { $('#labSaved').innerHTML = App.state.saved.map((s, i) => `<span class="tag">${F.esc(s.name)} <a href="#" data-ld="${i}">load</a> · <a href="#" data-del="${i}">×</a></span>`).join('') || '<span class="dim small">none</span>'; $$('a[data-ld]').forEach((x) => x.addEventListener('click', (e) => { e.preventDefault(); const s = App.state.saved[+x.dataset.ld]; labLoad(s.weights, s.name); })); $$('a[data-del]').forEach((x) => x.addEventListener('click', (e) => { e.preventDefault(); App.state.saved.splice(+x.dataset.del, 1); persist(); drawSaved(); })); };
@@ -2359,8 +2436,8 @@ function renderLabComparison(root) {
   else if (hasData()) dataRows = `<tr><td class="l" colspan="4"><span class="muted small">Measured comparison unavailable: ${F.esc((a2 && a2.reason) || (a1 && a1.reason) || '')}</span></td></tr>`;
   else dataRows = `<tr><td class="l" colspan="4"><span class="muted small">Load market history for volatility, Sharpe, beta, drawdown and tail-risk comparison.</span></td></tr>`;
   const scen = Content.SCENARIOS.slice(0, 16).map((s) => ({ name: s.name, a: scenarioResult(s, App.state.scenarioScale, base).total, b: scenarioResult(s, App.state.scenarioScale, cur).total }));
-  root.innerHTML = `<p class="muted small">Turnover from snapshot: ${F.pct(to)} · estimated one-way cost at 20bp: ${F.gbp(to * 2 * 0.002 * TOTAL, 0)}</p><div class="cmp-row"><div><table class="t"><tr><th class="l">Metric</th><th>Snapshot</th><th>${F.esc(App.state.labName)}</th><th>Change</th></tr>${rows.map((r) => `<tr><td class="l">${r.name}</td><td>${r.f(r.a)}</td><td>${r.f(r.b)}</td><td class="${F.cls(r.b - r.a)}">${r.f(r.b - r.a)}</td></tr>`).join('')}${dataRows}</table></div><div><div id="lab_sc" class="chart"></div></div></div>`;
-  plot('lab_sc', [{ type: 'bar', name: 'Snapshot', x: scen.map((s) => s.name), y: scen.map((s) => s.a * 100), marker: { color: '#8d97a7' } }, { type: 'bar', name: App.state.labName, x: scen.map((s) => s.name), y: scen.map((s) => s.b * 100), marker: { color: '#4fb3bf' } }], { barmode: 'group', title: 'Scenario impacts (hypothetical)', xaxis: { tickangle: -35, tickfont: { size: 10 } }, yaxis: { title: '%' }, margin: { b: 130, t: 36 } }, 'lab_scenarios');
+  root.innerHTML = `<p class="muted small">Turnover from current: ${F.pct(to)} · estimated one-way cost at 20bp: ${F.gbp(to * 2 * 0.002 * TOTAL, 0)}</p><div class="cmp-row"><div><table class="t"><tr><th class="l">Metric</th><th>Current</th><th>${F.esc(App.state.labName)}</th><th>Change</th></tr>${rows.map((r) => `<tr><td class="l">${r.name}</td><td>${r.f(r.a)}</td><td>${r.f(r.b)}</td><td class="${F.cls(r.b - r.a)}">${r.f(r.b - r.a)}</td></tr>`).join('')}${dataRows}</table></div><div><div id="lab_sc" class="chart"></div></div></div>`;
+  plot('lab_sc', [{ type: 'bar', name: 'Current', x: scen.map((s) => s.name), y: scen.map((s) => s.a * 100), marker: { color: '#8d97a7' } }, { type: 'bar', name: App.state.labName, x: scen.map((s) => s.name), y: scen.map((s) => s.b * 100), marker: { color: '#4fb3bf' } }], { barmode: 'group', title: 'Scenario impacts (hypothetical)', xaxis: { tickangle: -35, tickfont: { size: 10 } }, yaxis: { title: '%' }, margin: { b: 130, t: 36 } }, 'lab_scenarios');
 }
 
 /* ======================= INVESTMENT COMMITTEE ======================= */
@@ -2384,7 +2461,9 @@ Views.methodology = (v) => {
   const d = App.state.data; let status = '';
   if (hasData()) { const ser = Object.keys(d.series); const rows = universe().concat(C.map((c) => c.t)).filter((t, i, arr) => arr.indexOf(t) === i).map((t) => { const s = d.series[t]; const first = s ? d.dates[s.findIndex(Engine.isNum)] : null; const last = s ? d.dates[s.length - 1 - s.slice().reverse().findIndex(Engine.isNum)] : null; const ex = d.extra[t] || {}; return { t, name: label(t), loaded: !!s, first: first || '–', last: last || '–', n: s ? s.filter(Engine.isNum).length : 0, source: ex.source || (s ? 'imported' : '–'), proxy: ex.proxy || '' }; }); status = `<div id="ds_tbl"></div><p class="small muted">Benchmarks: ${Object.keys(d.benchmarks).join(', ') || 'none'} · Factors: ${Object.keys(d.factors).join(', ') || 'none'} · Risk-free: ${d.riskfree ? 'series' : 'constant ' + F.pct(App.state.rf)} · Generated: ${F.esc(d.meta.generated || 'n/a')}</p>${d.meta.notes ? `<ul class="small muted">${d.meta.notes.map((n) => `<li>${F.esc(n)}</li>`).join('')}</ul>` : ''}`; setTimeout(() => { const e2 = $('#ds_tbl'); if (e2) e2.appendChild(table([{ k: 'name', label: 'Instrument', align: 'l' }, { k: 't', label: 'Ticker', align: 'l' }, { k: 'loaded', label: 'Loaded', fmt: (x) => (x ? '<span class="pos">yes</span>' : '<span class="neg">no</span>') }, { k: 'first', label: 'First date' }, { k: 'last', label: 'Last date' }, { k: 'n', label: 'Obs' }, { k: 'source', label: 'Source', align: 'l' }, { k: 'proxy', label: 'Proxy / note', align: 'l' }], rows, { id: 'data_status', export: true })); }, 0); }
   else status = needData('Data status will appear here once the daily data file is published.');
-  v.innerHTML = `<div class="panel"><h2>Data status</h2>${status}</div>
+  const hl = hasData() && d.meta && d.meta.health ? d.meta.health : null;
+  const healthHtml = !hl ? '' : `<div class="panel"><h2>Data health</h2><p class="lead">Automatic checks run by the daily build: each holding's price on 16 Nov compared with your statement, unit (pence/pounds) glitches repaired, implausible daily moves and stale prices flagged.</p><div class="statrow">${statCard('Holdings passing', hl.filter((x) => x.status === 'ok').length + ' of ' + hl.length)}${statCard('Warnings', hl.filter((x) => x.status === 'warning').length, hl.filter((x) => x.status === 'warning').map((x) => x.ticker).join(', ') || 'none')}${statCard('Missing', hl.filter((x) => x.status === 'missing').length, hl.filter((x) => x.status === 'missing').map((x) => x.ticker).join(', ') || 'none')}</div><table class="t"><tr><th class="l">Holding</th><th class="l">Status</th><th class="l">History</th><th class="l">Checks</th></tr>${hl.map((x) => `<tr><td class="l">${label(x.ticker)}<div class="dim small">${x.ticker} via ${F.esc(x.source)}</div></td><td class="l ${x.status === 'ok' ? 'pos' : x.status === 'warning' ? 'warn' : 'neg'}">${x.status}</td><td class="l small">${x.first || '–'} → ${x.last || '–'}</td><td class="l small" style="white-space:normal">${(x.checks || []).map(F.esc).join('<br>')}</td></tr>`).join('')}</table></div>`;
+  v.innerHTML = `${healthHtml}<div class="panel"><h2>Data status</h2>${status}</div>
   <div class="panel prose"><h2>Methodology</h2>${Content.METHODOLOGY.map((m) => `<h3>${F.esc(m.h)}</h3><p>${F.esc(m.p)}</p>`).join('')}</div>
   <div class="panel"><h2>Planned data sources (pipeline)</h2><table class="t"><tr><th class="l">Item</th><th class="l">Source</th><th class="l">Note</th></tr>${Content.DATA_SOURCES_PLAN.map((s) => `<tr><td class="l">${F.esc(s.item)}</td><td class="l" style="white-space:normal">${F.esc(s.source)}</td><td class="l small muted" style="white-space:normal">${F.esc(s.note)}</td></tr>`).join('')}</table>
   <h3 style="margin-top:14px">CSV import formats</h3><pre>prices.csv       Date,KNSL,TBCG.L,...        GBP total-return index levels (or GBP prices if TR unavailable)
@@ -2398,12 +2477,13 @@ transactions.csv date,ticker,side,quantity,price,currency,fee   (side BUY/SELL/D
 /* ======================= BOOT ======================= */
 function boot() {
   restore(); buildNav(); bindDrawer(); updateDataPill('loading');
-  $('#weightPill').textContent = 'Weights: ' + (isSnapshotWeights() ? 'snapshot' : App.state.labName + ' (edited)');
+  setWeightPill(); updatePricePill();
   $('#openDrawer').addEventListener('click', openDrawer); $('#closeDrawer').addEventListener('click', closeDrawer); $('#menuBtn').addEventListener('click', () => $('.sidebar').classList.toggle('open'));
-  $('#resetWeights').addEventListener('click', () => { labPush(); App.state.labName = 'Proposed'; labSet({ ...App.state.base }, []); });
+  $('#resetWeights').addEventListener('click', () => { labPush(); App.state.labName = 'Proposed'; labSet({ ...App.state.base }, [], false); });
+  $('#refreshPrices').addEventListener('click', () => refreshLive(true));
   VIEWS.forEach((vw) => $('#views').appendChild(el(`<section class="view" id="view-${vw.id}"></section>`)));
   showView('overview');
-  autoLoadData();
+  autoLoadData().then(() => refreshLive());
   if (typeof Plotly === 'undefined') { let tries = 0; const h = setInterval(() => { tries++; if (typeof Plotly !== 'undefined') { clearInterval(h); rerenderAll(); } else if (tries > 40) { clearInterval(h); toast('Charts unavailable: the Plotly library could not be loaded from the CDN (offline?). Tables, text and calculations still work.', true); } }, 250); }
 }
 document.addEventListener('DOMContentLoaded', boot);
