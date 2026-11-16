@@ -165,6 +165,62 @@ def to_json_list(series, calendar):
         out.append(None if (v is None or (isinstance(v, float) and (math.isnan(v) or math.isinf(v)))) else float(f"{v:.7g}"))
     return out
 
+
+# Your statement prices on 16 Nov 2026, in each line's quote units (pence for GBp lines). Used to confirm the right line was downloaded.
+SNAPSHOT_PX = {'KNSL': 395.89, 'TBCG.L': 5400.00, 'EGO': 31.58, 'AVGO': 347.01, 'EWSP.L': 6.12, 'ZPRX.DE': 72.22, 'VIE.PA': 34.76, 'ADYEN.AS': 872.80,
+               'GD': 363.46, 'ADBE': 243.08, 'BIPS.L': 165.90, 'JAGI.L': 502.00, 'KAP.L': 60.30, 'TEZNY': 33.07, 'NOV.DE': 38.35, 'SGLN.L': 5696.00,
+               'THEON.AS': 27.82, 'ACT.DE': 139.20, 'SSLN.L': 3444.82, 'MGCI.L': 90.33}
+SNAPSHOT_DATE = '2026-11-16'
+UNIT_FIXES, HEALTH = {}, []
+
+def fix_unit_jumps(series):
+    """Repair Yahoo's pence/pounds switches on London lines: a one-day move of ~100x is a unit change, not a price move."""
+    vals = series.values.astype(float).copy(); fixes = 0; last = None
+    for i in range(len(vals)):
+        v = vals[i]
+        if not np.isfinite(v) or v <= 0:
+            continue
+        if last is not None:
+            r = v / last
+            if r > 30: vals[i:] = vals[i:] / 100; fixes += 1
+            elif r < 1 / 30: vals[i:] = vals[i:] * 100; fixes += 1
+        last = vals[i]
+    return pd.Series(vals, index=series.index), fixes
+
+def health_check(key, cfg, conv):
+    tr = conv['tr_local'].dropna(); px = conv['px_local']
+    h = {'ticker': key, 'source': cfg['yf'], 'status': 'ok', 'checks': []}
+    if tr.empty:
+        h.update(status='missing', checks=['No data downloaded']); return h
+    h['first'], h['last'] = tr.index[0].date().isoformat(), tr.index[-1].date().isoformat()
+    if cfg['yf'] in STOOQ_USED:
+        h['status'] = 'warning'; h['checks'].append('Yahoo failed; Stooq fallback used (price only, dividends not included)')
+    if UNIT_FIXES.get(key):
+        h['checks'].append(f"Repaired {UNIT_FIXES[key]} pence/pounds unit jump(s) in Yahoo's history")
+    r = tr.pct_change().dropna(); big = r[r.abs() > 0.35]
+    if len(big):
+        h['status'] = 'warning'; h['checks'].append(f"{len(big)} daily move(s) above 35%; largest {big.abs().max():.0%} on {big.abs().idxmax().date()} - check for a data error")
+    age = (pd.Timestamp.today().normalize() - tr.index[-1]).days
+    if age > 7:
+        h['status'] = 'warning'; h['checks'].append(f"Latest price is {age} days old")
+    snap = SNAPSHOT_PX.get(key)
+    if snap and cfg['yf'] == key:
+        ref = snap / 100 if cfg['ccy'] == 'GBp' else snap
+        v = px.loc[:pd.Timestamp(SNAPSHOT_DATE)].dropna()
+        if len(v):
+            ratio = v.iloc[-1] / ref
+            if 80 < ratio < 120 or 1 / 120 < ratio < 1 / 80:
+                h['checks'].append('Yahoo quotes this line in different units (pence vs pounds); returns are unaffected')
+                ratio = ratio / 100 if ratio > 1 else ratio * 100
+            dev = ratio - 1; h['statement_dev'] = round(float(dev), 4)
+            if abs(dev) > 0.05:
+                h['status'] = 'warning'; h['checks'].append(f"Price on 16 Nov differs from your statement by {dev:+.1%} - possibly the wrong line")
+            else:
+                h['checks'].append(f"Price on 16 Nov matches your statement ({dev:+.1%})")
+    elif snap:
+        h['checks'].append(f"History uses the home listing {cfg['yf']} (same company, GBP returns equivalent); statement-price check not applicable")
+    return h
+
 # ----------------------------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--start', default='2015-01-01'); ap.add_argument('--out', default='data/portfolio_data.json'); ap.add_argument('--csv', default='data/csv')
@@ -188,6 +244,9 @@ def main():
     def to_gbp(df, ccy, note_key):
         """Convert close/adj to GBP on the calendar; returns dict of series."""
         local_close, local_adj = df['close'], df['adj']
+        if ccy in ('GBp', 'GBP'):
+            local_close, f1 = fix_unit_jumps(local_close); local_adj, f2 = fix_unit_jumps(local_adj)
+            if f1 or f2: UNIT_FIXES[note_key] = max(f1, f2)
         if ccy == 'GBp': local_close, local_adj = local_close / 100.0, local_adj / 100.0; rate = None
         elif ccy == 'GBP': rate = None
         else:
@@ -228,6 +287,7 @@ def main():
         out_hold[key] = {'tr_gbp': to_json_list(conv['tr_gbp'], calendar), 'tr_local': to_json_list(conv['tr_local'], calendar), 'px_local': to_json_list(conv['px_local'], calendar), 'px_gbp': to_json_list(conv['px_gbp'], calendar),
                          'ccy': cfg['ccy'], 'source': f"Yahoo Finance {cfg['yf']} adjusted close / FX", 'proxy': proxy_note, 'first': first.date().isoformat() if first is not None else None, 'note': cfg.get('note')}
         sources.append(f"{cfg['yf']} (Yahoo Finance)")
+        if key in HOLDINGS: HEALTH.append(health_check(key, cfg, conv))
 
     # 4. Benchmarks
     out_bench = {}
@@ -282,7 +342,12 @@ def main():
     notes.append('Calendar: Monday-Friday; local holidays forward-filled up to 5 business days, so daily returns on those days are zero for the affected market.')
     notes.append('GBP conversion: price in quote currency divided by units of quote currency per GBP (Yahoo crosses); pence-quoted lines divided by 100.')
 
-    data = {'meta': {'generated': dt.datetime.now().isoformat(timespec='seconds'), 'base_currency': 'GBP', 'start': start, 'notes': notes, 'sources': sorted(set(sources)), 'snapshot_date': '2026-11-16'},
+    done = {x['ticker'] for x in HEALTH}
+    for k, cfg in HOLDINGS.items():
+        if k not in done: HEALTH.append({'ticker': k, 'source': cfg['yf'], 'status': 'missing', 'checks': ['Download failed; this holding is excluded from the analysis until the next successful run']})
+    order = list(HOLDINGS); HEALTH.sort(key=lambda x: order.index(x['ticker']))
+    log('Data health: ' + ', '.join(f"{x['ticker']}={x['status']}" for x in HEALTH))
+    data = {'meta': {'health': HEALTH, 'generated': dt.datetime.now().isoformat(timespec='seconds'), 'base_currency': 'GBP', 'start': start, 'notes': notes, 'sources': sorted(set(sources)), 'snapshot_date': '2026-11-16'},
             'dates': [d.date().isoformat() for d in calendar], 'holdings': out_hold, 'benchmarks': out_bench, 'factors': out_fac, 'riskfree': to_json_list(rf, calendar)}
     os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
     with open(args.out, 'w') as f: json.dump(data, f, separators=(',', ':'))
