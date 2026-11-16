@@ -179,7 +179,7 @@ pre { background: var(--surface-2); border: 1px solid var(--border); border-radi
   <main>
     <header class="topbar">
       <div class="left"><button class="btn small menubtn" id="menuBtn" aria-label="Menu">☰</button><h1 id="viewTitle">Overview</h1><span class="pill" id="weightPill">Weights: snapshot</span></div>
-      <div class="right"><span class="pill warn" id="dataPill"><span class="dot"></span>No market history loaded</span><button class="btn small" id="resetWeights" title="Reset lab weights to the snapshot">Reset weights</button><button class="btn small primary" id="openDrawer">Load data</button></div>
+      <div class="right"><span class="pill" id="dataPill"><span class="dot"></span>Loading market data…</span><button class="btn small" id="resetWeights" title="Reset lab weights to the snapshot">Reset weights</button><button class="btn small" id="openDrawer">Data</button></div>
     </header>
     <div class="content" id="views"></div>
   </main>
@@ -187,19 +187,19 @@ pre { background: var(--surface-2); border: 1px solid var(--border); border-radi
 <div class="drawer" id="drawer" aria-label="Data">
   <button class="btn small close" id="closeDrawer">Close</button>
   <h2>Market data</h2>
-  <p class="small muted">The application embeds no price history. Load the output of the Python pipeline (recommended) or import CSVs. All risk statistics, correlations and optimisations use only what you load here.</p>
-  <h3>Pipeline output (JSON)</h3>
-  <div class="filebox"><p class="small">Run <code>python build_data.py</code> in a folder with internet access; it writes <code>portfolio_data.json</code> with GBP total-return indices for every holding, benchmarks, factor series and the risk-free rate.</p><input type="file" id="jsonFile" accept=".json,application/json"></div>
-  <h3>CSV imports</h3>
+  <p class="small muted">On the hosted site, market data loads automatically from <code>data/portfolio_data.json</code>, which a GitHub Action rebuilds every weekday from Yahoo Finance and FRED. Nothing below is required; it is only for adding your own data.</p>
+  <h3>Optional: transaction history</h3>
+  <div class="filebox"><p class="small">Import trades to see your account's actual time-weighted and money-weighted returns (format: date,ticker,side,quantity,price,currency,fee).</p><label class="small"><input type="file" class="csvFile" data-kind="transactions" accept=".csv"></label></div>
+  <h3>Optional: replace or add data</h3>
+  <div class="filebox"><label class="small">Data file (same format as the published JSON) <input type="file" id="jsonFile" accept=".json,application/json"></label></div>
   <div class="filebox"><label class="small">Holding prices / total-return indices (GBP) <input type="file" class="csvFile" data-kind="prices" accept=".csv"></label></div>
   <div class="filebox"><label class="small">Benchmarks (MSCI_WORLD_GBP, GLOBAL_BONDS_GBPH, UK_GILTS…) <input type="file" class="csvFile" data-kind="benchmarks" accept=".csv"></label></div>
   <div class="filebox"><label class="small">Factor series (yields, spreads, FX, commodities, style proxies) <input type="file" class="csvFile" data-kind="factors" accept=".csv"></label></div>
   <div class="filebox"><label class="small">Risk-free rate (Date,RF in %) <input type="file" class="csvFile" data-kind="riskfree" accept=".csv"></label></div>
-  <div class="filebox"><label class="small">Transaction history (date,ticker,side,quantity,price,currency,fee) <input type="file" class="csvFile" data-kind="transactions" accept=".csv"></label></div>
   <p class="small muted">Formats are documented in Sources &amp; Methodology. Dates must be YYYY-MM-DD. Imported columns merge with anything already loaded.</p>
   <h3>Lab state</h3>
   <div class="controls"><button class="btn small" id="exportState">Export weights &amp; assumptions (JSON)</button><label class="small">Import <input type="file" id="importState" accept=".json"></label></div>
-  <div class="controls"><button class="btn small danger" id="clearData">Clear loaded market data</button></div>
+  <div class="controls"><button class="btn small" id="clearData">Reload published data</button></div>
 </div>
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
@@ -1396,7 +1396,7 @@ function analytics(opts = {}) {
 function invalidate() { App.cache.clear(); }
 
 /* ---------- data loading ---------- */
-function setData(obj) {
+function setData(obj, opts = {}) {
   // normalise structure: {dates, series:{t:[...]}, benchmarks:{k:[...]}, factors:{k:[...]}, riskfree:[...], meta}
   const dates = obj.dates; const series = {};
   const src = obj.holdings || obj.series || {};
@@ -1408,7 +1408,7 @@ function setData(obj) {
   App.state.dataMeta = obj.meta || {};
   invalidate(); updateDataPill(); renderView(App.view, true);
   const have = Object.keys(series).filter((t) => series[t] && series[t].some(Engine.isNum));
-  toast(`Loaded ${have.length} price series, ${Object.keys(benchmarks).length} benchmarks, ${Object.keys(factors).length} factor series (${dates.length} dates).`);
+  if (!opts.quiet) toast(`Loaded ${have.length} price series, ${Object.keys(benchmarks).length} benchmarks, ${Object.keys(factors).length} factor series (${dates.length} dates).`);
 }
 function parseCSV(text) {
   const lines = text.replace(/\r/g, '').split('\n').filter((l) => l.trim().length);
@@ -1434,10 +1434,26 @@ function importCSV(text, kind) {
   App.state.data = cur; App.state.dataMeta = cur.meta; invalidate(); updateDataPill(); renderView(App.view, true);
   toast(`Imported ${header.length - 1} ${kind} column(s), ${rows.length} rows.`);
 }
-function updateDataPill() {
-  const p = $('#dataPill'); if (!hasData()) { p.className = 'pill warn'; p.innerHTML = '<span class="dot"></span>No market history loaded'; return; }
+function updateDataPill(state) {
+  const p = $('#dataPill');
+  if (state === 'loading') { p.className = 'pill'; p.innerHTML = '<span class="dot"></span>Loading market data…'; return; }
+  if (!hasData()) { p.className = 'pill warn'; p.innerHTML = '<span class="dot"></span>' + (state === 'missing' ? 'Market data not published yet' : 'No market data'); return; }
   const d = App.state.data; const n = Object.keys(d.series).filter((t) => d.series[t] && d.series[t].some(Engine.isNum)).length;
-  p.className = 'pill ok'; p.innerHTML = `<span class="dot"></span>${n} series · ${d.dates[0]} → ${d.dates[d.dates.length - 1]}`;
+  const gen = d.meta && d.meta.generated ? String(d.meta.generated).slice(0, 10) : d.dates[d.dates.length - 1];
+  p.className = 'pill ok'; p.innerHTML = `<span class="dot"></span>Data to ${d.dates[d.dates.length - 1]} · ${n} series · updated ${gen}`;
+}
+async function autoLoadData() {
+  if (location.protocol === 'file:') { updateDataPill('missing'); App.dataNote = 'file'; renderView(App.view, true); return; }
+  updateDataPill('loading');
+  try {
+    const r = await fetch('data/portfolio_data.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    setData(d, { quiet: true });
+  } catch (e) {
+    App.dataNote = 'missing'; updateDataPill('missing'); renderView(App.view, true);
+    console.warn('Market data not available:', e.message);
+  }
 }
 
 /* ---------- Plotly helpers ---------- */
@@ -1504,7 +1520,10 @@ function tabs(container, items, onShow) {
 }
 function resizeCharts(root = document) { if (typeof Plotly === 'undefined') return; $$('.js-plotly-plot', root).forEach((d) => { try { Plotly.Plots.resize(d); } catch (e) { /* ignore */ } }); }
 function needData(msg) {
-  return `<div class="empty"><strong>Market history required.</strong> ${msg || 'This analysis uses imported price history.'} Open <button class="btn small" onclick="openDrawer()">Load data</button> to run the Python pipeline output or import CSVs. Nothing is estimated from assumptions here.</div>`;
+  const why = App.dataNote === 'file'
+    ? 'You opened the file directly from disk, so the browser blocks it from reading <code>data/portfolio_data.json</code>. On the GitHub Pages site this loads automatically.'
+    : 'The data file <code>data/portfolio_data.json</code> has not been published yet. On GitHub it is built automatically by the "Build market data and publish dashboard" Action a few minutes after each push and every weekday; refresh once that run has finished (Actions tab).';
+  return `<div class="empty"><strong>Market history not available yet.</strong> ${msg || 'This analysis uses the historical price data.'} ${why} Nothing here is estimated from assumptions.</div>`;
 }
 function notEnough(a) { return `<div class="empty"><strong>Not enough common history.</strong> ${F.esc(a.reason)} Try a shorter period, weekly/daily frequency, or load a proxy series.</div>`; }
 
@@ -1541,7 +1560,7 @@ function closeDrawer() { $('#drawer').classList.remove('open'); }
 function bindDrawer() {
   $('#jsonFile').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { setData(JSON.parse(await f.text())); closeDrawer(); } catch (err) { toast('Could not read JSON: ' + err.message, true); } });
   $$('.csvFile').forEach((inp) => inp.addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { importCSV(await f.text(), inp.dataset.kind); } catch (err) { toast('Import failed: ' + err.message, true); } }));
-  $('#clearData').addEventListener('click', () => { App.state.data = null; App.state.txns = null; invalidate(); updateDataPill(); rerenderAll(); toast('Market history cleared.'); });
+  $('#clearData').addEventListener('click', () => { App.state.data = null; invalidate(); closeDrawer(); autoLoadData(); });
   $('#exportState').addEventListener('click', () => downloadText('portfolio_lab_state.json', JSON.stringify({ weights: App.state.weights, extra: App.state.extra, saved: App.state.saved, erManual: App.state.erManual, loadings: App.state.loadings, fiInputs: App.state.fiInputs, rf: App.state.rf }, null, 2), 'application/json'));
   $('#importState').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { const s = JSON.parse(await f.text()); Object.assign(App.state, { weights: s.weights || App.state.weights, extra: s.extra || [], saved: s.saved || [], erManual: s.erManual || {}, loadings: s.loadings || App.state.loadings, fiInputs: s.fiInputs || App.state.fiInputs, rf: s.rf || App.state.rf }); invalidate(); rerenderAll(); toast('Lab state restored.'); } catch (err) { toast('Could not read state file: ' + err.message, true); } });
 }
@@ -2364,7 +2383,7 @@ Views.committee = (v) => {
 Views.methodology = (v) => {
   const d = App.state.data; let status = '';
   if (hasData()) { const ser = Object.keys(d.series); const rows = universe().concat(C.map((c) => c.t)).filter((t, i, arr) => arr.indexOf(t) === i).map((t) => { const s = d.series[t]; const first = s ? d.dates[s.findIndex(Engine.isNum)] : null; const last = s ? d.dates[s.length - 1 - s.slice().reverse().findIndex(Engine.isNum)] : null; const ex = d.extra[t] || {}; return { t, name: label(t), loaded: !!s, first: first || '–', last: last || '–', n: s ? s.filter(Engine.isNum).length : 0, source: ex.source || (s ? 'imported' : '–'), proxy: ex.proxy || '' }; }); status = `<div id="ds_tbl"></div><p class="small muted">Benchmarks: ${Object.keys(d.benchmarks).join(', ') || 'none'} · Factors: ${Object.keys(d.factors).join(', ') || 'none'} · Risk-free: ${d.riskfree ? 'series' : 'constant ' + F.pct(App.state.rf)} · Generated: ${F.esc(d.meta.generated || 'n/a')}</p>${d.meta.notes ? `<ul class="small muted">${d.meta.notes.map((n) => `<li>${F.esc(n)}</li>`).join('')}</ul>` : ''}`; setTimeout(() => { const e2 = $('#ds_tbl'); if (e2) e2.appendChild(table([{ k: 'name', label: 'Instrument', align: 'l' }, { k: 't', label: 'Ticker', align: 'l' }, { k: 'loaded', label: 'Loaded', fmt: (x) => (x ? '<span class="pos">yes</span>' : '<span class="neg">no</span>') }, { k: 'first', label: 'First date' }, { k: 'last', label: 'Last date' }, { k: 'n', label: 'Obs' }, { k: 'source', label: 'Source', align: 'l' }, { k: 'proxy', label: 'Proxy / note', align: 'l' }], rows, { id: 'data_status', export: true })); }, 0); }
-  else status = `<div class="empty"><strong>No market history loaded.</strong> Run <code>python build_data.py</code> (see README) to create <code>portfolio_data.json</code>, then load it from the data drawer; or import CSVs.</div>`;
+  else status = needData('Data status will appear here once the daily data file is published.');
   v.innerHTML = `<div class="panel"><h2>Data status</h2>${status}</div>
   <div class="panel prose"><h2>Methodology</h2>${Content.METHODOLOGY.map((m) => `<h3>${F.esc(m.h)}</h3><p>${F.esc(m.p)}</p>`).join('')}</div>
   <div class="panel"><h2>Planned data sources (pipeline)</h2><table class="t"><tr><th class="l">Item</th><th class="l">Source</th><th class="l">Note</th></tr>${Content.DATA_SOURCES_PLAN.map((s) => `<tr><td class="l">${F.esc(s.item)}</td><td class="l" style="white-space:normal">${F.esc(s.source)}</td><td class="l small muted" style="white-space:normal">${F.esc(s.note)}</td></tr>`).join('')}</table>
@@ -2378,12 +2397,13 @@ transactions.csv date,ticker,side,quantity,price,currency,fee   (side BUY/SELL/D
 
 /* ======================= BOOT ======================= */
 function boot() {
-  restore(); buildNav(); bindDrawer(); updateDataPill();
+  restore(); buildNav(); bindDrawer(); updateDataPill('loading');
   $('#weightPill').textContent = 'Weights: ' + (isSnapshotWeights() ? 'snapshot' : App.state.labName + ' (edited)');
   $('#openDrawer').addEventListener('click', openDrawer); $('#closeDrawer').addEventListener('click', closeDrawer); $('#menuBtn').addEventListener('click', () => $('.sidebar').classList.toggle('open'));
   $('#resetWeights').addEventListener('click', () => { labPush(); App.state.labName = 'Proposed'; labSet({ ...App.state.base }, []); });
   VIEWS.forEach((vw) => $('#views').appendChild(el(`<section class="view" id="view-${vw.id}"></section>`)));
   showView('overview');
+  autoLoadData();
   if (typeof Plotly === 'undefined') { let tries = 0; const h = setInterval(() => { tries++; if (typeof Plotly !== 'undefined') { clearInterval(h); rerenderAll(); } else if (tries > 40) { clearInterval(h); toast('Charts unavailable: the Plotly library could not be loaded from the CDN (offline?). Tables, text and calculations still work.', true); } }, 250); }
 }
 document.addEventListener('DOMContentLoaded', boot);
