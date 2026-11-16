@@ -1,0 +1,67 @@
+name: Build market data and publish dashboard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 6 * * 1-5'   # every weekday at 06:30 UTC, after European and US closes
+  workflow_dispatch:          # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download prices, FX, benchmarks and factors
+        id: data
+        continue-on-error: true
+        run: python build_data.py --out _build/portfolio_data.json --csv _build/csv
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/data
+          cp index.html _site/
+          touch _site/.nojekyll
+          if [ "${{ steps.data.outcome }}" = "success" ] && [ -s _build/portfolio_data.json ]; then
+            cp -r _build/* _site/data/
+            echo "Fresh data published."
+          else
+            OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+            REPO="${GITHUB_REPOSITORY#*/}"
+            echo "::warning::Data download failed; republishing the last good data."
+            curl -fsSL "https://${OWNER}.github.io/${REPO}/data/portfolio_data.json" -o _site/data/portfolio_data.json \
+              || echo "::warning::No previously published data found."
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
